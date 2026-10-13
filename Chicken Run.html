@@ -116,7 +116,7 @@ function update(dt){
     s.rage-=dt;s.rc-=d;s.pt-=dt;
     if(s.rc<=0){s.rc=190;s.coin.push({x:W+20,y:G-30-Math.random()*100,got:false,g:true})}
     if(s.pt<=0){s.pt=.22;snd(70,.12,'sawtooth',-20,.08)}
-    if(s.rage<=0){s.nrS=s.score+500+s.rl*300;snd(320,.5,'triangle',-200,.1)}
+    if(s.rage<=0){s.nrS=s.score+1500+s.rl*300;snd(320,.5,'triangle',-200,.1)}
   }
   s.items.forEach(i=>i.x-=d);s.items=s.items.filter(i=>i.x>-30);
   if(s.x>=s.nb&&s.fly<=0&&s.rage<=0){s.items.push({x:W+30,y:G-70,k:Math.random()<.35?'shield':'rocket'});s.nb=s.x+3000+Math.random()*2500}
@@ -232,7 +232,7 @@ function draw(){
 }
 function chicken(){
   const air=s.y+34<G-1,f=Math.sin(s.t*s.speed*.03),R=s.rage>0;
-  const nv=R?1:Math.max(0,Math.min(1,(s.score-3500)/1500)),lv=Math.min(1,s.rl/5);
+  const nv=R?1:0,lv=Math.min(1,s.rl/5);
   const mx=(a,b,k)=>a.map((v,i)=>Math.round(v+(b[i]-v)*k));
   const c=R?mx([229,50,31],[140,15,8],lv):mx([255,255,255],[235,90,70],nv);
   const B=s.star>0?'hsl('+((s.t*700)%360)+',90%,60%)':'rgb('+c+')',B2=s.star>0?'hsl('+((s.t*700+40)%360)+',90%,50%)':'rgb('+c.map(v=>Math.round(v*.85))+')',angry=nv>.35;
