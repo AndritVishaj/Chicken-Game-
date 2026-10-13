@@ -6,12 +6,20 @@
 :root{--bg:#fff7e6;--fg:#3b2a12;--card:#ffffff;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1c1710;--fg:#f6e9d0;--card:#2a2218}}
 :root[data-theme="dark"]{--bg:#1c1710;--fg:#f6e9d0;--card:#2a2218}
-html,body{margin:0;height:100%}
-body{background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,"Segoe UI",sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:12px;box-sizing:border-box}
+html,body{margin:0;min-height:100%}
+body{background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,"Segoe UI",sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:12px;padding:12px;box-sizing:border-box}
 h1{margin:0;font-size:1.4rem}
 #wrap{width:min(100%,1180px,calc((100vh - 210px)*2.6));background:var(--card);padding:8px;border-radius:14px;box-shadow:0 4px 18px rgba(0,0,0,.2)}
 canvas{width:100%;height:auto;display:block;border-radius:8px}
 body{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:manipulation}
+#lb{width:min(100%,820px);background:var(--card);border-radius:12px;padding:10px 12px;box-shadow:0 2px 10px rgba(0,0,0,.15);box-sizing:border-box}
+.lbh{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap}
+#nm,#rc{font:inherit;padding:3px 8px;border-radius:8px;border:1px solid currentColor;background:var(--bg);color:var(--fg);width:130px;-webkit-user-select:text;user-select:text}
+.row{position:relative;display:flex;justify-content:space-between;gap:8px;padding:4px 8px;margin:3px 0;border-radius:8px;overflow:hidden;font-size:.95rem;border:1px solid transparent}
+.row.me{border-color:#f59a1a;font-weight:bold}
+.row .bar{position:absolute;left:0;top:0;bottom:0;background:rgba(245,154,26,.3);z-index:0;transition:width .3s}
+.row span{position:relative;z-index:1}
+#lnote{opacity:.7;font-size:.8rem}
 #pad{display:none;width:100%;max-width:820px;justify-content:space-between;gap:8px}
 .g{display:flex;gap:8px}
 #pad button{font-size:1.4rem;min-width:62px;height:62px;margin:0;touch-action:none}
@@ -27,9 +35,12 @@ p{margin:0;font-size:.9rem;opacity:.85;text-align:center;line-height:1.5}
 🚀 raketa = fluturon 6 sekonda · 🛡️ mburoja = të mbron nga 1 goditje · ❓ blloqet: kërce poshtë tyre (monedha / 🍄 / ⭐) · kërce mbi kërpudhat 🟤 për t'i shtypur · 🚩 flamuri = bonus · 🔥 RAGE: sa më i lartë rezultati, aq më nervoze dhe më e shpejtë bëhet pula!<br>
 Trarët me litarë: përkulu (↓) dhe kalon poshtë · Sorrat: të ulëtat = kërce · të mesmet = përkulu · të lartat = kalo poshtë tyre<br>
 <button id="m" tabindex="-1">🔊 Zëri i hapur</button></p>
+<div id="lb"><div class="lbh"><b>🏆 Lojtarët live</b><label>Emri yt: <input id="nm" maxlength="12" autocomplete="off"></label><label>Dhoma: <input id="rc" maxlength="16" autocomplete="off"></label></div><div id="rows"></div><small id="lnote"></small></div>
 <script>
 const cv=document.getElementById('c'),ctx=cv.getContext('2d'),W=800,H=300,G=240,CW=34;let CX=90;const K={l:0,r:0,d:0};
 let best=0;try{best=+localStorage.getItem('chickenBest')||0}catch(e){}
+// ---- LIVE SKORI NË GITHUB: vendos këtu URL-në e Firebase Realtime Database (p.sh. 'https://emri-default-rtdb.firebaseio.com') ----
+const FB_URL='';
 const DPR=Math.min(2,window.devicePixelRatio||1);cv.width=W*DPR;cv.height=H*DPR;
 let s,state='ready',last=0,AC=null,muted=false;
 function snd(f,d,type='square',slide=0,v=.08){if(muted)return;try{AC=AC||new(window.AudioContext||window.webkitAudioContext)();if(AC.state==='suspended')AC.resume();const o=AC.createOscillator(),g=AC.createGain(),t=AC.currentTime;o.type=type;o.frequency.setValueAtTime(f,t);if(slide)o.frequency.exponentialRampToValueAtTime(Math.max(30,f+slide),t+d);g.gain.setValueAtTime(v,t);g.gain.exponentialRampToValueAtTime(.001,t+d);o.connect(g);g.connect(AC.destination);o.start(t);o.stop(t+d)}catch(e){}}
@@ -46,6 +57,7 @@ function jump(){
   else s.buf=.12;
 }
 addEventListener('keydown',e=>{
+  if(e.target&&(e.target.id==='nm'||e.target.id==='rc'))return;
   const c=e.code;
   if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(c))e.preventDefault();
   if(c==='Space'&&!e.repeat){
@@ -59,12 +71,69 @@ addEventListener('keydown',e=>{
   if(c==='KeyM')toggleMute();
 });
 addEventListener('keyup',e=>{
+  if(e.target&&(e.target.id==='nm'||e.target.id==='rc'))return;
   const c=e.code;
   if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(c))e.preventDefault();
   if(c==='ArrowUp')s.jumpHeld=false;
   if(c==='ArrowDown')K.d=0;if(c==='ArrowLeft')K.l=0;if(c==='ArrowRight')K.r=0;
 });
 
+let room=null,lastPush=0,LB=[],myName='';
+try{myName=localStorage.getItem('chickenName')||''}catch(e){}
+if(!myName)myName='Lojtari'+(100+Math.floor(Math.random()*900));
+const ST={play:'🏃',rage:'🔥',paused:'⏸',dead:'☠️',ready:'⌛'};
+function myState(){return state==='play'?(s.rage>0?'rage':'play'):state}
+function push(){if(!room)return;try{room.presence({n:myName,sc:s.score|0,st:myState(),lv:s.lv}).catch(()=>{})}catch(e){}}
+function renderBoard(){
+  const box=document.getElementById('rows');if(!box)return;
+  let L=[];
+  if(fbOK)L=fbList.slice();
+  else if(room){try{L=room.peers().filter(p=>p.kind==='viewer'&&p.presence&&p.presence.n).map(p=>({n:String(p.presence.n).slice(0,14),sc:+p.presence.sc||0,st:p.presence.st,lv:+p.presence.lv||1,me:p.isMe&&p.sameTab}))}catch(e){L=[]}}
+  L=L.filter(p=>!p.me);L.push({n:myName,sc:s.score|0,st:myState(),lv:s.lv,me:true});
+  L.sort((a,b)=>b.sc-a.sc);LB=L;
+  const max=Math.max(1,L[0].sc);box.textContent='';
+  L.slice(0,10).forEach((p,i)=>{
+    const r=document.createElement('div');r.className='row'+(p.me?' me':'');
+    const bar=document.createElement('div');bar.className='bar';bar.style.width=Math.max(3,p.sc/max*100)+'%';
+    const a=document.createElement('span');a.textContent=(['🥇','🥈','🥉'][i]||(i+1)+'.')+' '+p.n+(p.me?' (ti)':'');
+    const b=document.createElement('span');b.textContent=(ST[p.st]||'')+' Niveli '+p.lv+' · '+p.sc+' pikë';
+    r.append(bar,a,b);box.append(r);
+  });
+}
+const nm=document.getElementById('nm');nm.value=myName;
+nm.addEventListener('input',()=>{myName=nm.value.trim().slice(0,12)||'Lojtari';try{localStorage.setItem('chickenName',myName)}catch(e){}push();renderBoard()});
+nm.addEventListener('keydown',e=>{if(e.key==='Enter')nm.blur()});
+const FB=(FB_URL||'').replace(/\/$/,'');
+let pid='';try{pid=localStorage.getItem('chickenPid')||''}catch(e){}
+if(!pid){pid='p'+Math.random().toString(36).slice(2,9);try{localStorage.setItem('chickenPid',pid)}catch(e){}}
+let roomCode='familja';try{roomCode=localStorage.getItem('chickenRoom')||'familja'}catch(e){}
+let fbList=[],fbOK=false,seen={};
+const fbPath=()=>FB+'/chicken/'+roomCode;
+function fbPush(){if(!FB)return;fetch(fbPath()+'/'+pid+'.json',{method:'PUT',body:JSON.stringify({n:myName,sc:s.score|0,st:myState(),lv:s.lv,t:{'.sv':'timestamp'}}),keepalive:true}).catch(()=>{})}
+async function fbPoll(){
+  try{
+    const r=await fetch(fbPath()+'.json');if(!r.ok)throw 0;
+    const d=(await r.json())||{},now=Date.now();fbOK=true;
+    fbList=Object.entries(d).filter(([k,v])=>v&&typeof v==='object'&&v.n).filter(([k,v])=>{
+      if(k===pid)return true;
+      const pv=seen[k];if(!pv||pv.t!==v.t)seen[k]={t:v.t,at:now};
+      return now-seen[k].at<12000;
+    }).map(([k,v])=>({n:String(v.n).slice(0,14),sc:+v.sc||0,st:v.st,lv:+v.lv||1,me:k===pid}));
+  }catch(e){fbOK=false}
+  renderBoard();
+}
+const rc=document.getElementById('rc');rc.value=roomCode;if(!FB&&rc.parentElement)rc.parentElement.style.display='none';
+function fbLeave(){if(!FB)return;try{fetch(fbPath()+'/'+pid+'.json',{method:'DELETE',keepalive:true}).catch(()=>{})}catch(e){}}
+rc.addEventListener('change',()=>{fbLeave();roomCode=(rc.value.toLowerCase().replace(/[^a-z0-9_-]/g,'').slice(0,16))||'familja';rc.value=roomCode;try{localStorage.setItem('chickenRoom',roomCode)}catch(e){}fbList=[];seen={};fbPush()});
+rc.addEventListener('keydown',e=>{if(e.key==='Enter')rc.blur()});
+if(FB){setInterval(()=>{fbPush();fbPoll()},1000);addEventListener('pagehide',fbLeave)}
+(async()=>{
+  try{room=window.claude&&await window.claude.use('room')}catch(e){room=null}
+  const note=document.getElementById('lnote');
+  if(room){room.onPeers(()=>renderBoard());push()}
+  note.textContent=FB?'Live: të gjithë që shkruajnë të njëjtin kod dhome shfaqen këtu.':room?'Të gjithë që e kanë hapur këtë faqe tani shfaqen këtu në kohë reale.':'Pikët live mes pajisjeve kërkojnë FB_URL (Firebase) në fillim të skedarit.';
+  renderBoard();
+})();
 addEventListener('blur',()=>{K.l=K.r=K.d=0;if(s)s.jumpHeld=false;if(state==='play')state='paused'});
 function toggle(){
   if(state==='ready'){reset();state='play'}
@@ -232,6 +301,7 @@ function draw(){
   ctx.shadowColor='#0007';ctx.shadowBlur=4;
   ctx.fillText('Niveli '+s.lv+' · Pikët '+s.score,14,28);ctx.fillText('🪙 '+s.coins+(s.shield?'  🛡️':''),14,52);
   ctx.textAlign='right';ctx.fillText('Rekordi '+best,W-14,28);ctx.fillText('Shpejtësia '+Math.round(s.speed/260*100)+'%',W-14,52);
+  if(LB.length>1){ctx.textAlign='right';ctx.font='bold 14px system-ui';LB.slice(0,4).forEach((p,i)=>{ctx.fillStyle=p.me?'#ffe14a':'#fff';ctx.fillText((['🥇','🥈','🥉'][i]||(i+1)+'.')+' '+p.n+' '+p.sc,W-14,78+i*18)});ctx.font='bold 18px system-ui';ctx.fillStyle='#fff'}
   ctx.textAlign='center';
   if(s.star>0){ctx.fillStyle='#fff';ctx.font='bold 16px system-ui';ctx.fillText('⭐ YLLI '+Math.ceil(s.star),W/2,62)}
   if(s.fly>0){ctx.fillStyle='#ffe14a';ctx.fillRect(W/2-60,12,120*s.fly/6,8);ctx.font='bold 16px system-ui';ctx.fillText('FLUTURON!',W/2,38)}
@@ -273,6 +343,7 @@ function chicken(){
 function loop(t){
   const dt=Math.min(.033,(t-last)/1000||0);last=t;
   if(state==='play')update(dt);else{s.t+=dt;if(state==='dead'){s.deadT+=dt;moveParts(dt,0)}}
+  if(t-lastPush>250){lastPush=t;push();renderBoard()}
   draw();requestAnimationFrame(loop);
 }
 requestAnimationFrame(loop);
