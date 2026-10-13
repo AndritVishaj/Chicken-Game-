@@ -11,11 +11,18 @@ body{background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,"S
 h1{margin:0;font-size:1.4rem}
 #wrap{width:min(100%,1180px,calc((100vh - 210px)*2.6));background:var(--card);padding:8px;border-radius:14px;box-shadow:0 4px 18px rgba(0,0,0,.2)}
 canvas{width:100%;height:auto;display:block;border-radius:8px}
+body{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:manipulation}
+#pad{display:none;width:100%;max-width:820px;justify-content:space-between;gap:8px}
+.g{display:flex;gap:8px}
+#pad button{font-size:1.4rem;min-width:62px;height:62px;margin:0;touch-action:none}
+#pad #bj{min-width:120px;font-size:1.1rem;font-weight:bold}
+@media (pointer:coarse),(max-width:700px){#pad{display:flex}}
 button{font:inherit;margin-top:6px;padding:4px 12px;border-radius:8px;border:1px solid currentColor;background:var(--card);color:var(--fg);cursor:pointer}
 p{margin:0;font-size:.9rem;opacity:.85;text-align:center;line-height:1.5}
 </style></head><body>
 <h1>🐔 Chicken Run</h1>
 <div id="wrap"><canvas id="c" width="800" height="300"></canvas></div>
+<div id="pad"><div class="g"><button id="bl">◀</button><button id="br">▶</button><button id="bd">▼</button></div><div class="g"><button id="bp">⏯</button><button id="bj">⤒ KËRCE</button></div></div>
 <p><b>SPACE</b> = nis / pauzë / vazhdo · <b>↑</b> = kërce · <b>↓</b> = ul (ose bie shpejt) · <b>←/→</b> = ec para-prapa · <b>M</b> = zâ<br>
 🚀 raketa = fluturon 6s · 🛡️ mburoja = e mban 1 goditje · ❓ blloqet: kërce posht tyne (monedha/🍄/⭐) · shko mbi kërpudhat 🟤 me i shtypë · 🚩 flamuri = bonus · 🔥 RAGE: sa ma shumë score, aq ma nervoze edhe ma e shpejtë bahet pula!<br>
 Trarët me litarë: ul pulën (↓) e kalon posht · Kruje: të ulëta = kërce · të mesme = ul · të larta = ec posht tyne<br>
@@ -55,6 +62,15 @@ addEventListener('keyup',e=>{
   if(c==='ArrowDown')K.d=0;if(c==='ArrowLeft')K.l=0;if(c==='ArrowRight')K.r=0;
 });
 
+function toggle(){
+  if(state==='ready'){reset();state='play'}
+  else if(state==='dead'&&s.deadT>=.4){reset();state='play'}
+  else if(state==='play')state='paused';
+  else if(state==='paused')state='play';
+}
+function bind(id,d,u){const e=document.getElementById(id);e.addEventListener('pointerdown',ev=>{ev.preventDefault();window.focus();d()});['pointerup','pointercancel','pointerleave'].forEach(n=>e.addEventListener(n,ev=>{ev.preventDefault();u()}))}
+bind('bl',()=>K.l=1,()=>K.l=0);bind('br',()=>K.r=1,()=>K.r=0);bind('bd',()=>K.d=1,()=>K.d=0);
+bind('bj',()=>{s.jumpHeld=true;jump()},()=>{s.jumpHeld=false});bind('bp',toggle,()=>{});
 function spawn(){
   const sp=s.speed,R=s.rage>0;
   if(s.x>=s.next&&s.fly<=0){
@@ -84,7 +100,7 @@ function hit(o){
 function update(dt){
   s.t+=dt;s.inv=Math.max(0,s.inv-dt);CX=Math.max(30,Math.min(W-70,CX+(K.r-K.l)*280*dt));
   if(s.score>=s.nrS&&s.fly<=0&&s.rage<=0){s.rl++;s.rage=7+Math.min(s.rl,5);s.rmax=s.rage;s.nrS=1e12;const m=1+s.rl*.08;[400,620,400,620,400,620].forEach((f,k)=>setTimeout(()=>snd(f*m,.14,'sawtooth',0,.09),k*140))}
-  s.speed=Math.min(2200,Math.min(1500,260+Math.min(s.score,3500)*.075+Math.max(0,s.score-3500)*.25)*(s.fly>0?1.25:1)*(s.rage>0?Math.min(2.1,1.5+.2*s.rl):1));
+  s.speed=Math.min(1800,Math.min(1500,260+Math.min(s.score,3500)*.075+Math.max(0,s.score-3500)*.12)*(s.fly>0?1.25:1)*(s.rage>0?Math.min(1.7,1.25+.1*s.rl):1));
   const d=s.speed*dt;s.x+=d;
   s.score=Math.floor(s.x/10)+s.coins*10;
   const L=1+Math.floor(s.score/600);if(L>s.lv){s.lv=L;s.flags.push({x:W+80,got:false});s.ban=2.5;s.fade=1;[523,659,784,1047,1319].forEach((f,k)=>setTimeout(()=>snd(f,.12,'triangle',0,.1),k*80))}s.ban=Math.max(0,s.ban-dt);s.fade=Math.max(0,s.fade-dt*1.2);
@@ -209,9 +225,9 @@ function draw(){
   if(s.fly>0){ctx.fillStyle='#ffe14a';ctx.fillRect(W/2-60,12,120*s.fly/6,8);ctx.font='bold 16px system-ui';ctx.fillText('FLYING!',W/2,38)}
   if(R){ctx.fillStyle='#ffe14a';ctx.fillRect(W/2-70,12,140*s.rage/s.rmax,8);ctx.fillStyle='#fff';ctx.font='bold 22px system-ui';ctx.fillText('🔥 RAGE x'+s.rl+' 🔥',W/2,40)}
   if(s.ban>0&&state==='play'){ctx.globalAlpha=Math.min(1,s.ban);ctx.font='bold 34px system-ui';ctx.fillText('NIVELI '+s.lv+' · '+th.n,W/2,95);ctx.globalAlpha=1}
-  if(state==='ready'){ctx.font='bold 28px system-ui';ctx.fillText('Shtyp SPACE për me nis',W/2,120)}
-  if(state==='paused'){ctx.font='bold 30px system-ui';ctx.fillText('⏸ PAUZË · SPACE për me vazhdu',W/2,125)}
-  if(state==='dead'){ctx.font='bold 34px system-ui';ctx.fillText('Loja mbaroi! Score '+s.score,W/2,115);ctx.font='20px system-ui';ctx.fillText('Shtyp SPACE për me luejt prap',W/2,148)}
+  if(state==='ready'){ctx.font='bold 28px system-ui';ctx.fillText('Shtyp SPACE / ⏯ për me nis',W/2,120)}
+  if(state==='paused'){ctx.font='bold 30px system-ui';ctx.fillText('⏸ PAUZË · SPACE / ⏯ për me vazhdu',W/2,125)}
+  if(state==='dead'){ctx.font='bold 34px system-ui';ctx.fillText('Loja mbaroi! Score '+s.score,W/2,115);ctx.font='20px system-ui';ctx.fillText('Shtyp SPACE / ⏯ për me luejt prap',W/2,148)}
   ctx.shadowBlur=0;
 }
 function chicken(){
